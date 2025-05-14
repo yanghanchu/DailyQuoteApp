@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="#E0E0E0">
 
-    <!-- ✅ 顶部标题区域 -->
+    <!-- 顶部标题区域 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -38,7 +38,7 @@
             android:gravity="center"/>
     </LinearLayout>
 
-    <!-- ✅ 中部语录展示区（已上移） -->
+    <!-- 中部语录展示区 -->
     <LinearLayout
         android:id="@+id/quote_display_area"
         android:layout_width="match_parent"
@@ -73,7 +73,7 @@
             android:textStyle="italic" />
     </LinearLayout>
 
-    <!-- ✅ 操作按钮区 -->
+    <!--  操作按钮区 -->
     <Button
         android:id="@+id/btn_next"
         android:layout_width="match_parent"
@@ -105,7 +105,7 @@
         android:textColor="#222222"
         android:background="@drawable/bg_btn_round" />
 
-    <!-- ✅ 底部功能按钮区 -->
+    <!-- 底部功能按钮区 -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
