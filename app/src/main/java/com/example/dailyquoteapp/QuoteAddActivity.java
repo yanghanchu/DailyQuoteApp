@@ -1,5 +1,5 @@
 package com.example.dailyquoteapp;
-
+import com.example.dailyquoteapp.R;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Button;
