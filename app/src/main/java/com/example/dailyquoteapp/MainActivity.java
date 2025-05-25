@@ -11,6 +11,10 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.dailyquoteapp.net.ApiClient;
+import com.example.dailyquoteapp.net.HitokotoResponse;
+import com.example.dailyquoteapp.net.QuoteApiService;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -20,13 +24,21 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import retrofit2.Call;
+import retrofit2.Response;
+
 public class MainActivity extends AppCompatActivity {
 
     private TextView textQuote, textAuthor;
     private final List<String[]> quoteList = new ArrayList<>();
     private final Random random = new Random();
 
-    // 收藏用 SharedPreferences 名称 & 键
+    private String[] latestNetQuote = null;
+
+    private static final String PREFS_CUSTOM = "my_quotes";
+    private static final String KEY_CUSTOM_TEXT = "custom_quote_text";
+    private static final String KEY_CUSTOM_AUTHOR = "custom_quote_author";
+
     private static final String PREFS_FAV = "fav_quotes";
     private static final String KEY_FAV_LIST = "fav_list";
 
@@ -35,36 +47,50 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        textQuote  = findViewById(R.id.text_quote);
+        textQuote = findViewById(R.id.text_quote);
         textAuthor = findViewById(R.id.text_author);
-
-        Button btnNext      = findViewById(R.id.btn_next);
-        Button btnFav       = findViewById(R.id.btn_fav);
-        Button btnShare     = findViewById(R.id.btn_share);
+        Button btnNext = findViewById(R.id.btn_next);
+        Button btnFav = findViewById(R.id.btn_fav);
+        Button btnShare = findViewById(R.id.btn_share);
         Button btnCustomAdd = findViewById(R.id.btn_custom_add);
-        Button btnFavList   = findViewById(R.id.btn_fav_list);  // 查看收藏列表
+        Button btnFavList = findViewById(R.id.btn_fav_list);
         Button btnAllQuotes = findViewById(R.id.btn_all_quotes);
 
         loadQuotesFromAssets();
         loadUserQuote();
+        fetchOnlineQuote(); // ✅ 从 hitokoto.cn 获取语录
         showRandomQuote();
 
         btnNext.setOnClickListener(v -> showRandomQuote());
-        btnCustomAdd.setOnClickListener(v ->
-                startActivity(new Intent(MainActivity.this, QuoteAddActivity.class))
-        );
+
         btnFav.setOnClickListener(v -> addCurrentToFavorite());
-        btnFavList.setOnClickListener(v ->
-                startActivity(new Intent(MainActivity.this, FavoriteActivity.class))
+
+        btnShare.setOnClickListener(v -> {
+            String shareText = textQuote.getText() + "\n" + textAuthor.getText();
+            Intent share = new Intent(Intent.ACTION_SEND)
+                    .setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, shareText);
+            startActivity(Intent.createChooser(share, "分享到"));
+        });
+
+        btnCustomAdd.setOnClickListener(v ->
+                startActivity(new Intent(this, QuoteAddActivity.class))
         );
-        // btnShare / btnAllQuotes 可按需扩展
+
+        btnFavList.setOnClickListener(v ->
+                startActivity(new Intent(this, FavoriteActivity.class))
+        );
+
+        btnAllQuotes.setOnClickListener(v ->
+                startActivity(new Intent(this, AllQuotesActivity.class))
+        );
     }
 
     private void loadQuotesFromAssets() {
         try {
             AssetManager am = getAssets();
             BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(am.open("quotes.json"))
+                    new InputStreamReader(am.open("quotes.json"), "UTF-8")
             );
             StringBuilder sb = new StringBuilder();
             String line;
@@ -83,16 +109,35 @@ public class MainActivity extends AppCompatActivity {
             }
         } catch (Exception e) {
             Log.e("MainActivity", "加载本地语录失败", e);
+            Toast.makeText(this, "加载本地语录失败", Toast.LENGTH_SHORT).show();
         }
     }
 
     private void loadUserQuote() {
-        SharedPreferences sp = getSharedPreferences("my_quotes", MODE_PRIVATE);
-        String q = sp.getString("custom_quote_text", null);
+        SharedPreferences sp = getSharedPreferences(PREFS_CUSTOM, MODE_PRIVATE);
+        String q = sp.getString(KEY_CUSTOM_TEXT, null);
         if (q != null) {
-            String a = sp.getString("custom_quote_author", "佚名");
+            String a = sp.getString(KEY_CUSTOM_AUTHOR, "佚名");
             quoteList.add(new String[]{q, a});
         }
+    }
+
+    /** 新增：从 hitokoto.cn 获取一句网络语录 */
+    private void fetchOnlineQuote() {
+        new Thread(() -> {
+            try {
+                QuoteApiService service = ApiClient.getChineseService();
+                Call<HitokotoResponse> call = service.fetchChinese();
+                Response<HitokotoResponse> resp = call.execute();
+                if (resp.isSuccessful() && resp.body() != null) {
+                    HitokotoResponse data = resp.body();
+                    latestNetQuote = new String[]{data.hitokoto, data.from};
+                    quoteList.add(latestNetQuote); // ✅ 加入显示池
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
     }
 
     private void showRandomQuote() {
@@ -102,9 +147,8 @@ public class MainActivity extends AppCompatActivity {
         textAuthor.setText("—— " + qa[1]);
     }
 
-    /** 将当前显示的语录加入“我的收藏” */
     private void addCurrentToFavorite() {
-        String text   = textQuote.getText().toString();
+        String text = textQuote.getText().toString();
         String author = textAuthor.getText().toString().replaceFirst("^——\\s*", "");
 
         try {
@@ -112,7 +156,6 @@ public class MainActivity extends AppCompatActivity {
             String raw = sp.getString(KEY_FAV_LIST, "[]");
             JSONArray favArr = new JSONArray(raw);
 
-            // 检查是否已收藏，去重
             for (int i = 0; i < favArr.length(); i++) {
                 JSONObject obj = favArr.getJSONObject(i);
                 if (text.equals(obj.getString("text"))
@@ -122,20 +165,15 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
 
-            // 新增到数组
             JSONObject newObj = new JSONObject();
             newObj.put("text", text);
             newObj.put("author", author);
             favArr.put(newObj);
 
-            // 存回 SharedPreferences
-            sp.edit()
-                    .putString(KEY_FAV_LIST, favArr.toString())
-                    .apply();
-
+            sp.edit().putString(KEY_FAV_LIST, favArr.toString()).apply();
             Toast.makeText(this, "收藏成功", Toast.LENGTH_SHORT).show();
         } catch (Exception e) {
-            Log.e("MainActivity", "收藏语录失败", e);
+            Log.e("MainActivity", "收藏失败", e);
             Toast.makeText(this, "收藏失败", Toast.LENGTH_SHORT).show();
         }
     }

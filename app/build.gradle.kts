@@ -1,10 +1,13 @@
-// 先全局排除老的 kotlin-stdlib-jdk7/jdk8 依赖
+import org.gradle.api.JavaVersion
+
+// 排除多余的 Kotlin Stdlib，避免 jdk7/jdk8 冲突
 configurations.all {
     exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk7")
     exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib-jdk8")
 }
 
 plugins {
+    // 仅使用 Android Application 插件
     id("com.android.application")
 }
 
@@ -23,6 +26,7 @@ android {
     }
 
     compileOptions {
+        // Java 11 兼容
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -38,21 +42,32 @@ android {
     }
 
     buildFeatures {
+        // 开启 ViewBinding；关闭 Compose
         viewBinding = true
         compose     = false
     }
 }
 
 dependencies {
-    // 手动指定唯一的 kotlin-stdlib 版本（和 AGP 自带的 1.8.10 保持一致）
+    // 指定唯一的 Kotlin 标准库，仅供间接依赖使用
     implementation("org.jetbrains.kotlin:kotlin-stdlib:1.8.10")
 
-    // 纯 Java 库
+    // AndroidX 核心库
     implementation("androidx.core:core:1.10.1")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.8.0")
+    implementation("androidx.recyclerview:recyclerview:1.3.0")
 
-    // 测试
+    // 网络请求：Retrofit + Gson + 日志拦截
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+
+    // 本地数据库：Room
+    implementation("androidx.room:room-runtime:2.5.0")
+    annotationProcessor("androidx.room:room-compiler:2.5.0")
+
+    // 测试依赖
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")

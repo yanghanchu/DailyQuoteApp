@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.dailyquoteapp">
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="true"
@@ -10,23 +11,30 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
-        <!-- 添加语录页（不设为主启动页，不暴露给外部） -->
+        <!-- 启动页 -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- 添加语录页，不对外暴露 -->
         <activity
             android:name=".QuoteAddActivity"
             android:exported="false" />
 
-        <!-- 主页面（设置为 Launcher 启动页） -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+        <!-- 我的收藏页，不对外暴露 -->
         <activity
             android:name=".FavoriteActivity"
             android:exported="false" />
+
+        <!-- 语录大全页，不对外暴露 -->
+        <activity
+            android:name=".AllQuotesActivity"
+            android:exported="false" />
+
     </application>
 </manifest>
